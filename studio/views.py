@@ -10,24 +10,8 @@ from datetime import timedelta
 from django.db.models import Q
 
 from users.models import User
-from .models import Employee, Studio, Customer, Reservation, StudioOwner
+from .models import Employee, Studio, Reservation, StudioOwner
 from .serializers import StudioSerializer, ReservationSerializer
-
-
-def say_hello(request):
-    token = request.COOKIES.get('jwt')
-    if not token:
-        return HttpResponse("You are not logged in")
-
-    try:
-        payload = jwt.decode(token, 'secret', algorithms='HS256')
-    except jwt.ExpiredSignatureError:
-        raise AuthenticationFailed("UnAuthenticated")
-
-    user = User.objects.get(pk=payload['id'])
-    if user:
-        return HttpResponse("You are Logged in")
-    return HttpResponse("You are not logged in")
 
 
 class CreateStudio(APIView):
