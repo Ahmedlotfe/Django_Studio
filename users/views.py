@@ -9,32 +9,26 @@ from .models import User
 from studio.serializers import StudioOwnerSerializer, EmployeeSerializer, CustomerSerializer
 
 
-
 class RegisterView(APIView):
     def post(self, request):
         user_serializer = UserSerializer(data=request.data)
         if user_serializer.is_valid(raise_exception=True):
             user_serializer.save()
-
+            user_id = user_serializer.data['id']
+            user = User.objects.get(pk=user_id)
             if request.data['type'] == "S":
-                user_id = user_serializer.data['id']
-                user = User.objects.get(pk=user_id)
                 employee_serializer = StudioOwnerSerializer(
                     data={"owner": user.id})
                 if employee_serializer.is_valid(raise_exception=True):
                     employee_serializer.save()
 
             elif request.data['type'] == "E":
-                user_id = user_serializer.data['id']
-                user = User.objects.get(pk=user_id)
                 employee_serializer = EmployeeSerializer(
                     data={"employee": user.id})
                 if employee_serializer.is_valid(raise_exception=True):
                     employee_serializer.save()
 
             elif request.data['type'] == "C":
-                user_id = user_serializer.data['id']
-                user = User.objects.get(pk=user_id)
                 employee_serializer = CustomerSerializer(
                     data={"customer": user.id})
                 if employee_serializer.is_valid(raise_exception=True):
@@ -55,25 +49,19 @@ class LoginView(APIView):
         if not user.check_password(password):
             raise AuthenticationFailed("Incorrect password!")
 
+        payload = {
+            "id": user.id,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
+            "iat": datetime.datetime.utcnow(),
+        }
+
         # Check if the user is an employee,
         # I'm gonna create a token with studio_id which he is assigned to
-        if len(user.employee.all()) > 0:
-            employee = user.employee.all()[0]
+        if user.employee.all().count() > 0:
+            employee = user.employee.all().first()
             if employee.studio is not None:
                 studio_id = employee.studio.id
-
-                payload = {
-                    "id": user.id,
-                    "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
-                    "iat": datetime.datetime.utcnow(),
-                    "studio_id": studio_id
-                }
-        else:
-            payload = {
-                "id": user.id,
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
-                "iat": datetime.datetime.utcnow(),
-            }
+                payload["studio_id"] = studio_id
 
         token = jwt.encode(payload, 'secret', algorithm='HS256')
 
